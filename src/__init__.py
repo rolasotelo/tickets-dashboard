@@ -1,7 +1,7 @@
 import os
 
 import sqlalchemy.orm.exc
-from flask import Flask, redirect, url_for, render_template, abort
+from flask import Flask, redirect, url_for, render_template, abort, jsonify
 from flask_migrate import Migrate
 
 
@@ -38,6 +38,19 @@ def create_app(test_config=None):
         try:
             ticket = Ticket.query.filter_by(id=ticket_id).one()
             return render_template('tickets_show.html', ticket=ticket)
+        except sqlalchemy.orm.exc.NoResultFound:
+            abort(404)
+
+    @app.route('/api/tickets')
+    def api_tickets():
+        tickets_all = Ticket.query.all()
+        return jsonify([ticket.to_json() for ticket in tickets_all])
+
+    @app.route('/api/tickets/<int:ticket_id>')
+    def api_tickets_show(ticket_id):
+        try:
+            ticket = Ticket.query.filter_by(id=ticket_id).one()
+            return jsonify(ticket.to_json())
         except sqlalchemy.orm.exc.NoResultFound:
             abort(404)
 
