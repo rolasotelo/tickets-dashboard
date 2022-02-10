@@ -1,6 +1,8 @@
 import os
 
-from flask import Flask
+import sqlalchemy.orm.exc
+from flask import Flask, redirect, url_for, render_template, abort
+from flask_migrate import Migrate
 
 
 def create_app(test_config=None):
@@ -14,11 +16,29 @@ def create_app(test_config=None):
     else:
         app.config.from_mapping(test_config)
 
-    from .models import db
+    from .models import db, Ticket
     db.init_app(app)
+    migrate = Migrate(app, db)
+
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('404.html'), 404
 
     @app.route('/')
     def index():
-        return 'Hello world'
+        return redirect(url_for('tickets'))
+
+    @app.route('/tickets')
+    def tickets():
+        tickets_all = Ticket.query.all()
+        return render_template('tickets_index.html', tickets=tickets_all)
+
+    @app.route('/tickets/<int:ticket_id>')
+    def tickets_show(ticket_id):
+        try:
+            ticket = Ticket.query.filter_by(id=ticket_id).one()
+            return render_template('tickets_show.html', ticket=ticket)
+        except sqlalchemy.orm.exc.NoResultFound:
+            abort(404)
 
     return app
